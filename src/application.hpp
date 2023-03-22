@@ -3,7 +3,7 @@
 
 #include<glad/glad.h>
 #include <GLFW/glfw3.h>
-#include "window.hpp"
+#include "camera/camera.hpp"
 
 namespace glsb {
 
@@ -13,6 +13,21 @@ public:
     ~Application();
 
     int run();
+private:
+    GLFWwindow* window = nullptr;
+
+    Camera camera{};
+
+    // callbacks
+    static void windowResizeCallback(GLFWwindow*, int pWidth, int pHeight);
+    static void mouseCallback(GLFWwindow *window, double xPos, double yPos);
+
+    // timings
+    float lastFrame{}, deltaT{};
+    void calcDeltaT();
+
+    // user input
+    void handleInput(GLFWwindow*);
 };
 
 } // glsb

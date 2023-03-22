@@ -17,9 +17,9 @@ public:
     }
 
     static std::shared_ptr<Texture> newTexture() { return std::make_shared<Texture>(); }
-    void addTexture2D(const char* pPath, const char* pName, GLint pChannels);
+    void addTexture2D(const char* path, const char* name, GLint channels);
 
-    void bind(const Shader& pShader);
+    void bind(const Shader& shader);
 
 private:
     std::string mName{};

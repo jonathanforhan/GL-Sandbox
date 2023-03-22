@@ -2,24 +2,45 @@
 
 #include<iostream>
 
-#include "shader/shader.hpp"
+#include "shader.hpp"
 #include "plane.hpp"
 #include "cube.hpp"
 
 namespace glsb {
 
-WindowState windowState;
-
-void windowStateCallback(GLFWwindow*, int pWidth, int pHeight) {
-    windowState.setWindowState(pWidth, pHeight);
-    glViewport(0, 0, pWidth, pHeight);
-}
+bool cursorChange = true;
+float xCursorPos{}, yCursorPos{};
 
 Application::Application() {
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+    this->window = glfwCreateWindow(1920, 1080, "glsandbox", nullptr, nullptr);
+    // debug
+    //this->window = glfwCreateWindow(800, 800, "glsandbox", nullptr, nullptr);
+    if(!window) {
+        std::cout << "Failed to create GLFW window\n";
+        glfwTerminate();
+        return;
+    }
+    glfwMakeContextCurrent(window);
+    glfwSetFramebufferSizeCallback(window, windowResizeCallback);
+    glfwSetCursorPosCallback(window, mouseCallback);
+
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+        std::cout << "Failed to initialize GLAD\n";
+        return;
+    }
+    glEnable(GL_DEPTH_TEST);
+
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+    xCursorPos = (float)width/2;
+    yCursorPos = (float)height/2;
 };
 
 Application::~Application() {
@@ -27,21 +48,6 @@ Application::~Application() {
 }
 
 int Application::run() {
-    GLFWwindow* window = glfwCreateWindow(800, 800, "glsandbox", nullptr, nullptr);
-    if (window == nullptr) {
-        std::cout << "Failed to create GLFW window\n";
-        glfwTerminate();
-        return -1;
-    }
-    glfwMakeContextCurrent(window);
-    glfwSetFramebufferSizeCallback(window, windowStateCallback);
-
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-        std::cout << "Failed to initialize GLAD\n";
-        return -1;
-    }
-    glEnable(GL_DEPTH_TEST);
-
     std::shared_ptr<Shader> shader = Shader::newShader();
     shader->add("../../shaders/basic.vert", GL_VERTEX_SHADER);
     shader->add("../../shaders/basic.frag", GL_FRAGMENT_SHADER);
@@ -64,20 +70,18 @@ int Application::run() {
     cube_still.translate(0, 0.5f, 0);
 
     while(!glfwWindowShouldClose(window)) {
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-            glfwSetWindowShouldClose(window, true);
+        calcDeltaT();
+        handleInput(window);
+
+        if(cursorChange) {
+            camera.lookAround(xCursorPos, yCursorPos);
+            cursorChange = false;
+        }
+
         glClearColor( 0.3f, 0.1f, 0.4f, 1.0f );
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        float aspect = (float)windowState.getWidth() / (float)windowState.getHeight();
-        glm::mat4 projection = glm::mat4(1.0f);
-        projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 100.0f);
-        glm::mat4 view = glm::mat4(1.0f);
-        view = glm::translate(view, glm::vec3(0.0f, -0.5f, -3.0f));
-
-        shader->use();
-        shader->setUniform("view", view);
-        shader->setUniform("projection", projection);
+        camera.apply(window, &*shader);
 
         plane.render();
 
@@ -90,6 +94,38 @@ int Application::run() {
     }
 
     return 0;
+}
+
+void Application::windowResizeCallback(GLFWwindow*, int pWidth, int pHeight) {
+    glViewport(0, 0, pWidth, pHeight);
+}
+
+void Application::mouseCallback(GLFWwindow* window, double xPos, double yPos) {
+    xCursorPos = static_cast<float>(xPos);
+    yCursorPos = static_cast<float>(yPos);
+    cursorChange = true;
+}
+
+void Application::calcDeltaT() {
+    float currFrame = static_cast<float>(glfwGetTime());
+    deltaT = currFrame - lastFrame;
+    lastFrame = currFrame;
+}
+
+void Application::handleInput(GLFWwindow*) {
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
+
+    float cameraSpeed = static_cast<float>(5 * deltaT);
+
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        camera.translateForward(cameraSpeed);
+    else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        camera.translateBackward(cameraSpeed);
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        camera.translateLeft(cameraSpeed);
+    else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        camera.translateRight(cameraSpeed);
 }
 
 } // glsb

@@ -10,11 +10,11 @@ namespace glsb {
 
 class Cube : IObject {
 public:
-    Cube(std::shared_ptr<Shader> pShader, std::shared_ptr<Texture> pTexture);
+    Cube(std::shared_ptr<Shader> shader, std::shared_ptr<Texture> texture);
     ~Cube();
 
     void scale(float x, float y, float z) override;
-    void rotate(float x, float y, float z, float pAngle) override;
+    void rotate(float x, float y, float z, float angle) override;
     void translate(float x, float y, float z) override;
 
     void render() override;

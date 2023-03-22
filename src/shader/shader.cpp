@@ -1,8 +1,8 @@
 #include "shader.hpp"
 
-#include<fstream>
-#include<sstream>
-#include<iostream>
+#include <fstream>
+#include <sstream>
+#include <iostream>
 
 namespace glsb {
 
