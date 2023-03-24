@@ -1,11 +1,17 @@
-#version 450 core
+#version 450
 
-out vec4 fs_color;
+layout (location = 0) in vec3 pos;
+layout (location = 1) in vec2 texCoord;
 
-in vec2 vs_texCoord;
+out vec2 vs_texCoord;
 
-uniform sampler2D tex;
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
+
+uniform vec2 texCoordScale;
 
 void main(void) {
-    fs_color = texture(tex, vs_texCoord);
+    gl_Position = projection * view * model * vec4(pos, 1.0);
+    vs_texCoord = texCoord * texCoordScale;
 }

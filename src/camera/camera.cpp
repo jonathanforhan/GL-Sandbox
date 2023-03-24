@@ -59,8 +59,8 @@ void Camera::apply(GLFWwindow *pWindow, Shader* pShader) {
     glfwGetFramebufferSize(pWindow, &width, &height);
     float aspect = (float)width / (float)height;
 
+    pShader->use();
     glm::mat4 projection = glm::perspective(glm::radians(mFov), aspect, 0.1f, 100.0f);
-
     glm::mat4 view = glm::lookAt(mPos, mPos + mFront, mUp);
 
     pShader->setUniform("view", view);

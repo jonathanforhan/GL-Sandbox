@@ -18,8 +18,6 @@ Application::Application() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     this->window = glfwCreateWindow(1920, 1080, "glsandbox", nullptr, nullptr);
-    // debug
-    //this->window = glfwCreateWindow(800, 800, "glsandbox", nullptr, nullptr);
     if(!window) {
         std::cout << "Failed to create GLFW window\n";
         glfwTerminate();
@@ -53,21 +51,27 @@ int Application::run() {
     shader->add("../../shaders/basic.frag", GL_FRAGMENT_SHADER);
     shader->createProgram();
 
-    std::shared_ptr<Texture> ruby = Texture::newTexture();
-    ruby->addTexture2D("../../textures/ruby.jpg", "tex", GL_RGB);
-    Cube cube_still(shader, ruby);
-    Cube cube_spin(shader, ruby);
+    std::shared_ptr<Shader> lightShader = Shader::newShader();
+    lightShader->add("../../shaders/lighting.vert", GL_VERTEX_SHADER);
+    lightShader->add("../../shaders/lighting.frag", GL_FRAGMENT_SHADER);
+    lightShader->createProgram();
 
-    std::shared_ptr<Texture> tile = Texture::newTexture();
-    tile->addTexture2D("../../textures/tile.jpg", "tex", GL_RGB);
-    Plane plane(shader, tile);
+    std::shared_ptr<Texture> stone = Texture::newTexture();
+    stone->addTexture2D("../../textures/stone_brick.jpg", "tex", GL_RGB);
 
+    std::shared_ptr<Texture> lamp = Texture::newTexture();
+    lamp->addTexture2D("../../textures/lamp.jpg", "tex", GL_RGB);
+
+    Plane plane(shader, stone);
     plane.scale(30, 0, 30);
-    cube_still.scale(0.5f, 0.5f, 0.5f);
-    cube_spin.scale(0.5f, 0.5f, 0.5f);
 
-    cube_spin.translate(0, 2.5f, 0);
-    cube_still.translate(0, 0.5f, 0);
+    Cube lamps0 = Cube(lightShader, lamp);
+    Cube lamps1 = Cube(lightShader, lamp);
+    Cube lamps2 = Cube(lightShader, lamp);
+
+    lamps0.translate(0, 0.5f, 0);
+    lamps1.translate(0, 1.5f, 0);
+    lamps2.translate(1.0f, 0.5f, 0);
 
     while(!glfwWindowShouldClose(window)) {
         calcDeltaT();
@@ -78,16 +82,26 @@ int Application::run() {
             cursorChange = false;
         }
 
-        glClearColor( 0.3f, 0.1f, 0.4f, 1.0f );
+        glClearColor( 0.1f, 0.1f, 0.1f, 1.0f );
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         camera.apply(window, &*shader);
+        camera.apply(window, &*lightShader);
+
+        glm::vec4 lightColor = glm::vec4(0.8f, 0.6f, 0.5f, 1.0f);
+
+        shader->use();
+        shader->setUniform("lightColor", lightColor);
+        shader->setUniform("lightPos", glm::vec3(0.0f, 2.5f, 0.0f));
+        shader->setUniform("camPos", camera.getPosition());
 
         plane.render();
 
-        cube_spin.rotate(1.0f, 1.0f, 0, 1.0f);
-        cube_still.render();
-        cube_spin.render();
+        lightShader->use();
+        lightShader->setUniform("lightColor", lightColor);
+        lamps0.render();
+        lamps1.render();
+        lamps2.render();
 
         glfwSwapBuffers(window);
         glfwPollEvents();

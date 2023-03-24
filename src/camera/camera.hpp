@@ -19,10 +19,12 @@ public:
 
     void lookAround(float x, float y);
 
-    void apply(GLFWwindow *window, Shader *shader);
+    void apply(GLFWwindow* window, Shader* shader);
+
+    const glm::vec3& getPosition() { return mPos; }
 
 private:
-    glm::vec3 mPos = glm::vec3(0.0f, 1.0f, 3.0f);
+    glm::vec3 mPos = glm::vec3(0.0f, 1.8f, 3.0f);
     glm::vec3 mFront = glm::vec3(0.0f, 0.0f, -1.0f);
     glm::vec3 mUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
