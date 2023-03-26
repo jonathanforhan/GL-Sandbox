@@ -5,6 +5,7 @@
 #include "shader.hpp"
 #include "plane.hpp"
 #include "cube.hpp"
+#include "model.hpp"
 
 namespace glsb {
 
@@ -56,6 +57,11 @@ int Application::run() {
     lightShader->add("../../shaders/lighting.frag", GL_FRAGMENT_SHADER);
     lightShader->createProgram();
 
+    std::shared_ptr<Shader> modelShader = Shader::newShader();
+    modelShader->add("../../shaders/model.vert", GL_VERTEX_SHADER);
+    modelShader->add("../../shaders/model.frag", GL_FRAGMENT_SHADER);
+    modelShader->createProgram();
+
     std::shared_ptr<Texture> stone = Texture::newTexture();
     stone->addTexture2D("../../textures/stone_brick.jpg", "tex", GL_RGB);
 
@@ -73,6 +79,8 @@ int Application::run() {
     lamps1.translate(0, 1.5f, 0);
     lamps2.translate(1.0f, 0.5f, 0);
 
+    Model model("../../assets/backpack/backpack.obj");
+
     while(!glfwWindowShouldClose(window)) {
         calcDeltaT();
         handleInput(window);
@@ -87,6 +95,7 @@ int Application::run() {
 
         camera.apply(window, &*shader);
         camera.apply(window, &*lightShader);
+        camera.apply(window, &*modelShader);
 
         glm::vec4 lightColor = glm::vec4(0.8f, 0.6f, 0.5f, 1.0f);
 
@@ -102,6 +111,14 @@ int Application::run() {
         lamps0.render();
         lamps1.render();
         lamps2.render();
+
+        modelShader->use();
+        glm::mat4 mod = glm::mat4(1.0f);
+        mod = glm::translate(mod, glm::vec3(10.0f, 2.0f, 0.0f)); // translate it down so it's at the center of the scene
+        mod = glm::scale(mod, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
+        modelShader->setUniform("model", mod);
+
+        model.Draw((Shader&)*shader);
 
         glfwSwapBuffers(window);
         glfwPollEvents();

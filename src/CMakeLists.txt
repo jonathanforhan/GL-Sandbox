@@ -9,6 +9,8 @@ file(GLOB_RECURSE TEXTURE_SOURCE texture/*.cpp)
 file(GLOB_RECURSE OBJECT_SOURCE object/*.cpp)
 file(GLOB_RECURSE CAMERA_SOURCE camera/*.cpp)
 file(GLOB_RECURSE LIGHT_SOURCE lighting/*.cpp)
+file(GLOB_RECURSE MESH_SOURCE mesh/*.cpp)
+file(GLOB_RECURSE MODEL_SOURCE model/*.cpp)
 
 add_library(APP_LIB STATIC
         application.cpp
@@ -17,6 +19,8 @@ add_library(APP_LIB STATIC
         ${OBJECT_SOURCE}
         ${CAMERA_SOURCE}
         ${LIGHT_SOURCE}
+        ${MESH_SOURCE}
+        ${MODEL_SOURCE}
         )
 
 target_include_directories(APP_LIB PRIVATE
@@ -25,6 +29,8 @@ target_include_directories(APP_LIB PRIVATE
         object
         camera
         lighting
+        mesh
+        model
         )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE APP_LIB)

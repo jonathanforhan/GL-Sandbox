@@ -22,10 +22,15 @@ else()
   endif()
 endif()
 
-include_directories(extern/glad/include/
-                    extern/glfw/include/
-                    extern/glm/
-                    extern/stb/)
+find_package(OpenGL REQUIRED)
+
+include_directories(
+        extern/glad/include/
+        extern/glfw/include/
+        extern/glm/
+        extern/stb/
+        extern/assimp/include/
+        )
 
 # GLFW config
 option(GLFW_INSTALL OFF)
@@ -34,13 +39,18 @@ option(GLFW_BUILD_EXAMPLES OFF)
 option(GLFW_BUILD_TESTS OFF)
 add_subdirectory(extern/glfw)
 
+add_subdirectory(extern/assimp)
+
 set(GLAD_SOURCE "${CMAKE_SOURCE_DIR}/extern/glad/src/glad.c")
 
 add_subdirectory(src)
 
 # EXTERN DEPENDENCIES
-target_link_libraries (${PROJECT_NAME}
-                       PRIVATE
-                       glfw
-                       ${GLFW_LIBRARIES}
-                       ${GLAD_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}
+        PUBLIC
+        glfw
+        ${GLFW_LIBRARIES}
+        ${GLAD_LIBRARIES}
+        assimp
+        ${ASSIMP_LIBRARIES}
+        )
