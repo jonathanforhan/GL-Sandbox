@@ -4,51 +4,70 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include "../shader/shader.hpp"
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
 #include <vector>
 #include <string>
-
-#define MAX_BONE_INFLUENCE 4
+#include <memory>
+#include "texture.hpp"
 
 namespace glsb {
 
 struct Vertex {
-    // position
-    glm::vec3 Position;
-    // normal
-    glm::vec3 Normal;
-    // texCoords
-    glm::vec2 TexCoords;
-    // tangent
-    glm::vec3 Tangent;
-    // bitangent
-    glm::vec3 Bitangent;
-    //bone indexes which will influence this vertex
-    int m_BoneIDs[MAX_BONE_INFLUENCE];
-    //weights from each bone
-    float m_Weights[MAX_BONE_INFLUENCE];
+    glm::vec3 position;
+    glm::vec2 texCoords;
+    glm::vec3 normal;
+
+    Vertex()=default;
+
+    Vertex(glm::vec3 pPos, glm::vec2 pTexCoords, glm::vec3 pNormal)
+        : position(pPos), texCoords(pTexCoords), normal(pNormal) {};
+
+    Vertex(glm::vec3 pPos, glm::vec2 pTexCoords)
+        : position(pPos), texCoords(pTexCoords), normal(glm::vec3(0.0f, 0.0f, 0.0f)) {};
 };
 
-struct Tex {
-    uint32_t id;
-    std::string type;
-    std::string path;
+struct MeshEntry {
+    ~MeshEntry() {
+        if(VBO != 0) {
+            glDeleteBuffers(1, &VBO);
+        }
+        if(EBO != 0) {
+            glDeleteBuffers(1, &EBO);
+        }
+    }
+
+    void init(const std::vector<Vertex>& pVertices, const std::vector<uint32_t>& pIndices) {
+        numIndices = pIndices.size();
+        glGenBuffers(1, &VBO);
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, (uint32_t)(sizeof(Vertex) * pVertices.size()), &pVertices[0], GL_STATIC_DRAW);
+
+        glGenBuffers(1, &EBO);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, (uint32_t)(sizeof(uint32_t) * numIndices), &pIndices[0], GL_STATIC_DRAW);
+    }
+
+    uint32_t VBO{}, EBO{};
+    uint32_t numIndices = 0;
+    uint32_t materialIndex = 0;
 };
+
 
 class Mesh {
 public:
-    // mesh data
-    std::vector<Vertex>   vertices;
-    std::vector<uint32_t> indices;
-    std::vector<Tex>      textures;
+    bool loadMesh(const char* pFilename);
 
-    Mesh(std::vector<Vertex> vertices, std::vector<uint32_t> indices, std::vector<Tex> textures);
-    void Draw(Shader &shader);
+    void render();
+
 private:
-    //  render data
-    unsigned int VAO, VBO, EBO;
+    bool initFromScene(const aiScene* pScene, const char* pFilename);
+    void initMesh(uint32_t pIndex, const aiMesh* paiMesh);
+    bool initMaterials(const aiScene* pScene, const char* pFilename);
 
-    void setupMesh();
+    std::vector<MeshEntry> mEntries;
+    std::vector<std::shared_ptr<Texture>> mTextures;
 };
 
 } // glsb

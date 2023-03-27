@@ -45,6 +45,8 @@ Plane::Plane(std::shared_ptr<Shader> pShader, std::shared_ptr<Texture> pTexture)
     this->mVAO = VAO;
     this->mVBO = VBO;
     this->mEBO = EBO;
+
+    glBindVertexArray(0);
 }
 
 Plane::~Plane() {

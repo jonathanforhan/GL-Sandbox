@@ -1,7 +1,6 @@
 #ifndef GLSANDBOX_TEXTURE_HPP
 #define GLSANDBOX_TEXTURE_HPP
 
-#include <glad/glad.h>
 #include <memory>
 #include <vector>
 #include <string>
@@ -17,13 +16,15 @@ public:
     }
 
     static std::shared_ptr<Texture> newTexture() { return std::make_shared<Texture>(); }
-    void addTexture2D(const char* path, const char* name, GLint channels);
+    void addTexture2D(const char* path, const char* name, int channels);
 
     void bind(const Shader& shader);
+    void bind();
 
 private:
     std::string mName{};
-    GLuint mID{};
+    uint32_t mID{};
+
 };
 
 } // glsb

@@ -1,16 +1,17 @@
 #include "camera.hpp"
 
 #include <cmath>
-#include <iostream>
 
 namespace glsb {
 
 void Camera::translateForward(float pSpeed) {
-    mPos += pSpeed * glm::vec3(mFront.x, 0.0f, mFront.z);
+    //mPos += pSpeed * glm::vec3(mFront.x, 0.0f, mFront.z);
+    mPos += pSpeed * glm::vec3(mFront.x, mFront.y, mFront.z);
 }
 
 void Camera::translateBackward(float pSpeed) {
-    mPos -= pSpeed * glm::vec3(mFront.x, 0.0f, mFront.z);
+    //mPos -= pSpeed * glm::vec3(mFront.x, 0.0f, mFront.z);
+    mPos -= pSpeed * glm::vec3(mFront.x, mFront.y, mFront.z);
 }
 
 void Camera::translateLeft(float pSpeed) {

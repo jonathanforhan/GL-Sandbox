@@ -74,6 +74,8 @@ Cube::Cube(std::shared_ptr<Shader> pShader, std::shared_ptr<Texture> pTexture)
     this->mVAO = VAO;
     this->mVBO = VBO;
     this->mEBO = EBO;
+
+    glBindVertexArray(0);
 }
 
 Cube::~Cube() {
@@ -104,6 +106,7 @@ void Cube::render() {
 
     glBindVertexArray(mVAO);
     glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
+    glBindVertexArray(0);
 }
 
 } // glsb

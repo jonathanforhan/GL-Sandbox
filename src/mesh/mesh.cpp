@@ -1,91 +1,169 @@
+#include <iostream>
 #include "mesh.hpp"
 
-#include <utility>
+const int ASSIMP_LOAD_FLAGS = (
+    aiProcess_Triangulate |
+    aiProcess_JoinIdenticalVertices |
+    aiProcess_GenUVCoords |
+    aiProcess_SortByPType |
+    aiProcess_RemoveRedundantMaterials |
+    aiProcess_FindInvalidData |
+    //aiProcess_FlipUVs |
+    aiProcess_CalcTangentSpace |
+    aiProcess_GenSmoothNormals |
+    aiProcess_ImproveCacheLocality |
+    aiProcess_OptimizeMeshes |
+    aiProcess_SplitLargeMeshes
+);
 
 namespace glsb {
 
-Mesh::Mesh(std::vector<Vertex> vertices, std::vector<uint32_t> indices, std::vector<Tex> textures)
-    : vertices(std::move(vertices)), indices(std::move(indices)), textures(std::move(textures)) {
-    setupMesh();
-};
+bool Mesh::loadMesh(const char *pFilename) {
+    mTextures.clear();
+    bool res = false;
 
-void Mesh::Draw(Shader &shader) {
-    // bind appropriate textures
-    uint32_t diffuseNr  = 1;
-    uint32_t specularNr = 1;
-    uint32_t normalNr   = 1;
-    uint32_t heightNr   = 1;
-    for(size_t i = 0; i < textures.size(); i++)
-    {
-        glActiveTexture(GL_TEXTURE0 + i); // active proper texture unit before binding
-        // retrieve texture number (the N in diffuse_textureN)
-        std::string number;
-        std::string name = textures[i].type;
-        if(name == "texture_diffuse")
-            number = std::to_string(diffuseNr++);
-        else if(name == "texture_specular")
-            number = std::to_string(specularNr++); // transfer unsigned int to string
-        else if(name == "texture_normal")
-            number = std::to_string(normalNr++); // transfer unsigned int to string
-        else if(name == "texture_height")
-            number = std::to_string(heightNr++); // transfer unsigned int to string
+    Assimp::Importer importer;
 
-        // now set the sampler to the correct texture unit
-        glUniform1i(glGetUniformLocation(shader.getID(), (name + number).c_str()), (int)i);
-        // and finally bind the texture
-        glBindTexture(GL_TEXTURE_2D, textures[i].id);
+    const aiScene* scene = importer.ReadFile(pFilename, ASSIMP_LOAD_FLAGS);
+
+    if(scene) {
+        res = initFromScene(scene, pFilename);
+    }
+    else {
+        std::cout << "ERROR::ASSIMP::FILE::" << pFilename << std::endl;
     }
 
-    // draw mesh
-    glBindVertexArray(VAO);
-    glDrawElements(GL_TRIANGLES, static_cast<uint32_t>(indices.size()), GL_UNSIGNED_INT, nullptr);
-    glBindVertexArray(0);
-
-    // always good practice to set everything back to defaults once configured.
-    glActiveTexture(GL_TEXTURE0);
+    return res;
 }
 
-void Mesh::setupMesh() {
-    // create buffers/arrays
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
-
+void Mesh::render() {
+    uint32_t VAO;
+    glCreateVertexArrays(1, &VAO);
     glBindVertexArray(VAO);
-    // load data into vertex buffers
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    // A great thing about structs is that their memory layout is sequential for all its items.
-    // The effect is that we can simply pass a pointer to the struct and it translates perfectly to a glm::vec3/2 array which
-    // again translates to 3/2 floats which translates to a byte array.
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
-
-    // set the vertex attribute pointers
-    // vertex Positions
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
-    // vertex normals
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Normal));
-    // vertex texture coords
     glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TexCoords));
-    // vertex tangent
-    glEnableVertexAttribArray(3);
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Tangent));
-    // vertex bitangent
-    glEnableVertexAttribArray(4);
-    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Bitangent));
-    // ids
-    glEnableVertexAttribArray(5);
-    glVertexAttribIPointer(5, 4, GL_INT, sizeof(Vertex), (void*)offsetof(Vertex, m_BoneIDs));
 
-    // weights
-    glEnableVertexAttribArray(6);
-    glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, m_Weights));
+    for(auto& entry : mEntries) {
+        glBindBuffer(GL_ARRAY_BUFFER, entry.VBO);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), nullptr);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)12);
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)20);
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, entry.EBO);
+
+        const uint32_t materialIndex = entry.materialIndex;
+
+        if (materialIndex < mTextures.size() && mTextures[materialIndex]) {
+            mTextures[materialIndex]->bind();
+        }
+
+        glDrawElements(GL_TRIANGLES, (int)entry.numIndices, GL_UNSIGNED_INT, nullptr);
+    }
+
+    glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
+    glDisableVertexAttribArray(2);
+
     glBindVertexArray(0);
+}
+
+bool Mesh::initFromScene(const aiScene *pScene, const char *pFilename) {
+    mEntries.resize(pScene->mNumMeshes);
+    mTextures.resize(pScene->mNumMaterials);
+
+    for(size_t i = 0; i < mEntries.size(); ++i) {
+        const aiMesh* mesh = pScene->mMeshes[i];
+        initMesh(i, mesh);
+    }
+
+    return initMaterials(pScene, pFilename);
+}
+
+void Mesh::initMesh(uint32_t pIndex, const aiMesh *paiMesh) {
+    mEntries[pIndex].materialIndex = paiMesh->mMaterialIndex;
+
+    std::vector<Vertex> vertices;
+    std::vector<uint32_t> indices;
+
+    const aiVector3D Zero3D(0.0f, 0.0f, 0.0f);
+
+    for(size_t i = 0; i < paiMesh->mNumVertices; ++i) {
+        const aiVector3D* pos = &(paiMesh->mVertices[i]);
+        const aiVector3D* normal = &(paiMesh->mNormals[i]);
+        const aiVector3D* texCoord = paiMesh->HasTextureCoords(0) ? &(paiMesh->mTextureCoords[0][i]) : &Zero3D;
+
+        auto ai_to_glm3 = [](const aiVector3D* v) {
+            return glm::vec3(v->x, v->y, v->z);
+        };
+        auto ai_to_glm2 = [](const aiVector3D* v) {
+            return glm::vec2(v->x, v->y);
+        };
+
+        Vertex vertex(ai_to_glm3(pos), ai_to_glm2(texCoord), ai_to_glm3(normal));
+        vertices.push_back(vertex);
+    }
+
+    for (size_t i = 0; i < paiMesh->mNumFaces; ++i) {
+        const aiFace& face = paiMesh->mFaces[i];
+        assert(face.mNumIndices == 3);
+        indices.push_back(face.mIndices[0]);
+        indices.push_back(face.mIndices[1]);
+        indices.push_back(face.mIndices[2]);
+    }
+
+    mEntries[pIndex].init(vertices, indices);
+}
+
+bool Mesh::initMaterials(const aiScene *pScene, const char *pFilename) {
+    std::string filename = pFilename;
+
+    std::string::size_type slashIndex = filename.find_last_of('/');
+    std::string dir;
+
+    if (slashIndex == std::string::npos) {
+        dir = '.';
+    }
+    else if (slashIndex == 0) {
+        dir = '/';
+    }
+    else {
+        dir = filename.substr(0, slashIndex);
+    }
+
+    bool res = true;
+
+    // Initialize the materials
+    for (size_t i = 0; i < pScene->mNumMaterials; ++i) {
+        const aiMaterial* material = pScene->mMaterials[i];
+
+        mTextures[i] = nullptr;
+
+        if(material->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
+            aiString path;
+
+            if(material->GetTexture(aiTextureType_DIFFUSE, 0, &path, nullptr, nullptr, nullptr, nullptr, nullptr) == AI_SUCCESS) {
+                std::string fullPath = dir + "/" + path.data;
+                std::replace(fullPath.begin(), fullPath.end(), '\\', '/');
+
+                std::string extension = fullPath.substr(fullPath.find_last_of('.') + 1);
+                int channels = GL_RGB;
+                if(extension == "png") {
+                    channels = GL_RGBA;
+                }
+
+#ifndef NDEBUG
+                std::cout << fullPath << '\n';
+#endif
+
+                mTextures[i] = Texture::newTexture();
+                mTextures[i]->addTexture2D(fullPath.c_str(), "texture_diffuse1", channels);
+            }
+        }
+    }
+
+    return res;
 }
 
 } // glsb

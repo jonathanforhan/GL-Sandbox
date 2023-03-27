@@ -6,8 +6,8 @@
 
 namespace glsb {
 
-void Texture::addTexture2D(const char* pPath, const char* pName, GLint pChannels) {
-    GLuint tex;
+void Texture::addTexture2D(const char* pPath, const char* pName, int pChannels) {
+    uint32_t tex;
     glCreateTextures(GL_TEXTURE_2D, 1, &tex);
     glBindTexture(GL_TEXTURE_2D, tex);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -34,6 +34,11 @@ void Texture::bind(const Shader &pShader) {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, mID);
     pShader.setUniform(mName, 0);
+}
+
+void Texture::bind() {
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, mID);
 }
 
 } // glsb

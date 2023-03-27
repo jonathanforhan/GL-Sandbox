@@ -5,7 +5,7 @@
 #include "shader.hpp"
 #include "plane.hpp"
 #include "cube.hpp"
-#include "model.hpp"
+#include "mesh.hpp"
 
 namespace glsb {
 
@@ -46,6 +46,12 @@ Application::~Application() {
     glfwTerminate();
 }
 
+struct {
+    float rotation = 0.0f;
+    float x = 0.0f;
+    float y = 0.0f;
+} test;
+
 int Application::run() {
     std::shared_ptr<Shader> shader = Shader::newShader();
     shader->add("../../shaders/basic.vert", GL_VERTEX_SHADER);
@@ -62,24 +68,11 @@ int Application::run() {
     modelShader->add("../../shaders/model.frag", GL_FRAGMENT_SHADER);
     modelShader->createProgram();
 
-    std::shared_ptr<Texture> stone = Texture::newTexture();
-    stone->addTexture2D("../../textures/stone_brick.jpg", "tex", GL_RGB);
+    Mesh hall;
+    hall.loadMesh("../../assets/hall/NHMHintzeHall01.obj");
 
-    std::shared_ptr<Texture> lamp = Texture::newTexture();
-    lamp->addTexture2D("../../textures/lamp.jpg", "tex", GL_RGB);
-
-    Plane plane(shader, stone);
-    plane.scale(30, 0, 30);
-
-    Cube lamps0 = Cube(lightShader, lamp);
-    Cube lamps1 = Cube(lightShader, lamp);
-    Cube lamps2 = Cube(lightShader, lamp);
-
-    lamps0.translate(0, 0.5f, 0);
-    lamps1.translate(0, 1.5f, 0);
-    lamps2.translate(1.0f, 0.5f, 0);
-
-    Model model("../../assets/backpack/backpack.obj");
+    glm::mat4 hall_transform = glm::mat4(1.0f);
+    hall_transform = glm::rotate(hall_transform, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
     while(!glfwWindowShouldClose(window)) {
         calcDeltaT();
@@ -104,21 +97,13 @@ int Application::run() {
         shader->setUniform("lightPos", glm::vec3(0.0f, 2.5f, 0.0f));
         shader->setUniform("camPos", camera.getPosition());
 
-        plane.render();
-
         lightShader->use();
         lightShader->setUniform("lightColor", lightColor);
-        lamps0.render();
-        lamps1.render();
-        lamps2.render();
 
         modelShader->use();
-        glm::mat4 mod = glm::mat4(1.0f);
-        mod = glm::translate(mod, glm::vec3(10.0f, 2.0f, 0.0f)); // translate it down so it's at the center of the scene
-        mod = glm::scale(mod, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
-        modelShader->setUniform("model", mod);
 
-        model.Draw((Shader&)*shader);
+        modelShader->setUniform("model", hall_transform);
+        hall.render();
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -131,7 +116,7 @@ void Application::windowResizeCallback(GLFWwindow*, int pWidth, int pHeight) {
     glViewport(0, 0, pWidth, pHeight);
 }
 
-void Application::mouseCallback(GLFWwindow* window, double xPos, double yPos) {
+void Application::mouseCallback(GLFWwindow*, double xPos, double yPos) {
     xCursorPos = static_cast<float>(xPos);
     yCursorPos = static_cast<float>(yPos);
     cursorChange = true;
@@ -147,7 +132,12 @@ void Application::handleInput(GLFWwindow*) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
-    float cameraSpeed = static_cast<float>(5 * deltaT);
+    float cameraSpeed = static_cast<float>(6 * deltaT);
+
+    if(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+    glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS) {
+        cameraSpeed *= 2;
+    }
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         camera.translateForward(cameraSpeed);
@@ -157,6 +147,31 @@ void Application::handleInput(GLFWwindow*) {
         camera.translateLeft(cameraSpeed);
     else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         camera.translateRight(cameraSpeed);
+
+    if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS) {
+        test.rotation -= 1.0f;
+        std::cout << test.rotation << '\n';
+    }
+    else if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS) {
+        test.rotation += 1.0f;
+        std::cout << test.rotation << '\n';
+    }
+    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+        test.y += 1.0f;
+        std::cout << "test.y: " << test.y << '\n';
+    }
+    else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+        test.y -= 1.0f;
+        std::cout << "test.y: " << test.y << '\n';
+    }
+    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+        test.x += 1.0f;
+        std::cout << "test.x: " << test.x << '\n';
+    }
+    else if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+        test.x -= 1.0f;
+        std::cout << "test.x: " << test.x << '\n';
+    }
 }
 
 } // glsb
